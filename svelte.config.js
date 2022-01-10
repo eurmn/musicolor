@@ -7,11 +7,17 @@ const config = {
   // for more information about preprocessors
   preprocess: [preprocess({})],
 
+  // procuro uma configuração que remova o path absoluto da build final,
+  // por enquanto, estou removendo manualmente.
   kit: {
     adapter: adapter(),
     // hydrate the <div id="svelte"> element in src/app.html
     target: "#svelte",
-    ssr: false
+    ssr: false,
+    floc: false,
+    paths: {
+      base: '/musicolor'
+    }
   },
 };
 
