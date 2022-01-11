@@ -1,14 +1,14 @@
 <script lang="ts">
+  import { fade } from "svelte/transition";
   import { Buffer } from 'buffer';
   import axios from 'axios';
 
   let copiedTooltip: HTMLSpanElement;
   let userColor: { color: string; gradient: string };
-  let musicStyle: { dancable: string; energetic: string; happiness: string };
+  let musicStyle: { instrumental: string | null; energetic: string; happiness: string };
   let songs = new Array<string>();
   let isLoggedIn = false;
   let token: string;
-  let loading = false;
   let logInURL = 'https://accounts.spotify.com/authorize';
   logInURL += '?response_type=token';
   logInURL += '&client_id=' + encodeURIComponent('e069de3022af4a738e103dfa452c80a2');
@@ -47,7 +47,8 @@
   async function getUserColor(): Promise<{ color: string; gradient: string }> {
     return new Promise((resolve) => {
       axios
-        .get('https://api.spotify.com/v1/me/top/tracks?limit=25&time_range=short_term', {
+        // 25 ~ short term
+        .get('https://api.spotify.com/v1/me/top/tracks?limit=15&time_range=short_term', {
           headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         })
         .then((response) => {
@@ -60,49 +61,25 @@
             .then((fResponse) => {
               let features = fResponse.data.audio_features;
 
-              let danceabilities: number[] = features.map((a) => a.danceability);
-              let danceability = danceabilities.reduce((a, b) => a + b, 0) / danceabilities.length;
-
-              let sadnesses: number[] = features.map((a) => 1 - a.valence);
-              let sadness = sadnesses.reduce((a, b) => a + b, 0) / sadnesses.length;
-
-              musicStyle = { dancable: '', energetic: '', happiness: '' };
-
-              let hueRange: { min: number; max: number };
-              // dancável e feliz: amarelo ~ verde
-              // dancável e triste: azul
-              // não dancável e triste: vermelho
-              if (danceability > 0.5 && sadness < 0.5) {
-                hueRange = { min: 40, max: 115 };
-                musicStyle.dancable = 'dancable';
-                musicStyle.happiness = 'happy';
-              } else if (danceability > 0.5 && sadness > 0.5) {
-                musicStyle.dancable = 'dancable';
-                musicStyle.happiness = 'emotional';
-                hueRange = { min: 180, max: 270 };
-              } else {
-                musicStyle.dancable = 'calming';
-                musicStyle.happiness = 'emotional';
-                hueRange = { min: 0, max: 30 };
-              }
-
-              let energies = features.map((a) => a.energy);
+              let sadnessArray: number[] = features.map((a) => 1 - a.valence);
+              let sadness = sadnessArray.reduce((a, b) => a + b, 0) / sadnessArray.length;
+              
+              let energies: number[] = features.map((a) => a.energy);
               let energy = energies.reduce((a, b) => a + b, 0) / energies.length;
-              if (energy >= 0.5) {
-                musicStyle.energetic = 'energetic';
-              } else {
-                musicStyle.energetic = 'relaxing';
-              }
 
-              let hue = Math.round(energy * (hueRange.max - hueRange.min) + hueRange.min);
-
-              let instrumentals: number[] = features.map((a) => 1 - a.instrumentalness);
-              let instrumentalness =
-                instrumentals.reduce((a, b) => a + b, 0) / instrumentals.length;
-
-              let sat = Math.round(instrumentalness * 100);
-
+              let loudnessArray: number[] = features.map((a) => (a.loudness + 60) / 60);
+              let loudness = loudnessArray.reduce((a, b) => a + b, 0) / loudnessArray.length;
+              console.log(loudness);
+              
+              let hue = Math.round(energy * 360);
+              let sat = Math.round(loudness * 100);
               let light = Math.round((1 - sadness) * 100);
+
+              musicStyle = {
+                instrumental: loudness >= 0.5 ? 'loud' : 'quiet',
+                energetic: sadness <= 0.5 ? 'happy' : 'melancholic',
+                happiness: energy >= 0.5 ? 'energetic' : 'chill'
+              };
 
               resolve({
                 color: hslToHex(hue, sat, light),
@@ -116,8 +93,19 @@
   function copyColor(): void {
     copiedTooltip.classList.remove('invisible');
     navigator.clipboard.writeText(userColor.color);
+    copiedTooltip.style.opacity = '0%';
+    let translate = { x : Math.random() * 100, y: (Math.random() * 1.5 - 1) * 100 };
+    let gravity = 0.1;
+    copiedTooltip.style.transform = `translate(${translate.x}%, ${translate.y}%)`;
+    let fallOutInterval = setInterval(() => {
+      translate.y += gravity;
+      gravity += 0.1;
+      copiedTooltip.style.transform = `translate(${translate.x}%, ${translate.y}%)`;
+    }, 10);
     setTimeout(() => {
       copiedTooltip.classList.add('invisible');
+      copiedTooltip.style.opacity = '100%';
+      clearInterval(fallOutInterval);
     }, 500);
   }
 
@@ -126,18 +114,8 @@
   // and do it every time the localStorage changes
   window.addEventListener('storage', setUpIsLoggedIn);
 
-  /* window.addEventListener('mousemove', (event) => {
-    frame.style.backgroundPosition = `${(event.clientX * 100) / window.outerWidth}% ${
-      (event.clientY * 100) / window.outerHeight
-    }%`;
-  });
- */
   $: if (isLoggedIn) {
-    loading = true;
-    getUserColor().then((hex) => {
-      userColor = hex;
-      loading = false;
-    });
+    getUserColor().then((hex) => { userColor = hex; });
   }
 </script>
 
@@ -145,18 +123,17 @@
   <title>musicolor</title>
 </svelte:head>
 
-<h1 class="text-3xl m-5 self-start justify-self-start absolute">musicolor</h1>
 <main class="w-full h-full flex flex-col justify-center items-center">
   {#if isLoggedIn}
     <span class="text-3xl text-center font-tw drop-shadow mb-2">
       {#if userColor}
-      your musicolor is <span on:click={copyColor}
-      class="font-bold relaive group cursor-pointer"
-      style="color: {userColor.color}"
-      ><span class="invisible text-sm rounded font-normal absolute -right-1 translate-x-full p-1 bg-white text-black"
-      bind:this={copiedTooltip}>copied!</span>{userColor.color}</span>
+        your musicolor is <span on:click={copyColor}
+        class="font-bold relaive group cursor-pointer"
+        style="color: {userColor.color}"
+        ><span class="transition-opacity duration-500 invisible text-sm rounded font-normal absolute p-1 bg-white text-black"
+        bind:this={copiedTooltip}>copied!</span>{userColor.color}</span>
       {:else}
-      getting your musicolors &lt;3
+        getting your musicolors &lt;3
       {/if}
     </span>
   {/if}
@@ -167,7 +144,7 @@
       : 'linear-gradient(238deg, #9700fd, #003dfd)'};"
   >
     {#each songs as song, i}
-      <span class="text-2xl w-full opacity-20 text-white block {i % 2 == 0 ? 'text-left' : 'text-right'}">{song}</span>
+      <span transition:fade class="text-2xl w-full opacity-20 text-white block {i % 2 == 0 ? 'text-left' : 'text-right'}">{song}</span>
     {/each}
   </div>
   {#if !isLoggedIn}
@@ -183,7 +160,7 @@
 </main>
 {#if musicStyle}
   <span class="absolute bottom-5 w-full text-center"
-    >your style is {musicStyle.dancable}, {musicStyle.energetic} and {musicStyle.happiness} :)</span
+    >your style is {musicStyle.energetic}, {musicStyle.instrumental} and {musicStyle.happiness} :)</span
   >
 {/if}
 
