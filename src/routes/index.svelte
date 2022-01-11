@@ -3,9 +3,9 @@
   // import init, { get_img_height } from '../proeminent-color/proeminent_color';
   import axios from 'axios';
 
-  let frame: HTMLDivElement;
   let userColor: { color: string; gradient: string };
   let musicStyle: { dancable: string; energetic: string; happiness: string };
+  let songs = new Array<string>();
   let isLoggedIn = false;
   let token: string;
   let loading = false;
@@ -13,7 +13,8 @@
   logInURL += '?response_type=token';
   logInURL += '&client_id=' + encodeURIComponent('e069de3022af4a738e103dfa452c80a2');
   logInURL += '&scope=user-top-read';
-  logInURL += '&redirect_uri=' + encodeURIComponent('https://euromoon.github.io/musicolor/callback');
+  logInURL +=
+    '&redirect_uri=' + encodeURIComponent('https://euromoon.github.io/musicolor/callback');
 
   function setUpIsLoggedIn(): void {
     let newToken = localStorage.getItem('token');
@@ -29,10 +30,11 @@
     }
   }
 
-  function hslToHex(h, s, l) {
+  // roubei do stackoverflow ou algo assim, mínima ideia de como funciona
+  function hslToHex(h: number, s: number, l: number): string {
     l /= 100;
     const a = (s * Math.min(l, 1 - l)) / 100;
-    const f = (n) => {
+    const f = (n: number) => {
       const k = (n + h / 30) % 12;
       const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
       return Math.round(255 * color)
@@ -49,6 +51,7 @@
           headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         })
         .then((response) => {
+          songs = response.data.items.slice(0, 10).map(m => m.name.toLowerCase());
           let ids: string[] = response.data.items.map((m) => m.id);
           axios
             .get(`https://api.spotify.com/v1/audio-features?ids=${ids.join(',')}`, {
@@ -63,7 +66,7 @@
               let sadnesses: number[] = features.map((a) => 1 - a.valence);
               let sadness = sadnesses.reduce((a, b) => a + b, 0) / sadnesses.length;
 
-              musicStyle = { dancable: '', energetic: '', happiness: '' };
+              musicStyle = { dancable: '', energetic: '', happiness: '' }
 
               let hueRange: { min: number; max: number };
               // dancável e feliz: amarelo ~ verde
@@ -85,17 +88,20 @@
 
               let energies = features.map((a) => a.energy);
               let energy = energies.reduce((a, b) => a + b, 0) / energies.length;
-              if (energy >= 0.5)
-              {
+              if (energy >= 0.5) {
                 musicStyle.energetic = 'energetic';
-              }
-              else
-              {
+              } else {
                 musicStyle.energetic = 'relaxing';
               }
 
               let hue = Math.round(energy * (hueRange.max - hueRange.min) + hueRange.min);
-              let sat = Math.round(danceability * 100);
+
+              let instrumentals: number[] = features.map((a) => 1 - a.instrumentalness);
+              let instrumentalness =
+                instrumentals.reduce((a, b) => a + b, 0) / instrumentals.length;
+
+              let sat = Math.round(instrumentalness * 100);
+
               let light = Math.round((1 - sadness) * 100);
 
               resolve({
@@ -137,16 +143,19 @@
     <span class="text-3xl text-center font-tw drop-shadow mb-2">your musicolor is:</span>
   {/if}
   <div
-    class="rounded-lg shadow-lg aspect-square{isLoggedIn ? '' : ' frame'}"
-    bind:this={frame}
+    class="overflow-hidden font-tw p-5 rounded-lg shadow-lg aspect-square{isLoggedIn ? '' : ' frame'}"
     style="width: 33vh; background: {userColor
       ? `linear-gradient(238deg, ${userColor.color}, ${userColor.gradient})`
       : 'linear-gradient(238deg, #9700fd, #003dfd)'};"
-  />
-  {#if loading}
-    <span>loading... wait a minute &lt;3</span>
-  {:else if isLoggedIn}
-    <span class="text-2xl text-center font-tw">{userColor.color}</span>
+  >
+    {#each songs as song, i}
+      <span class="text-2xl w-full opacity-20 text-white block {i % 2 == 0 ? 'text-left' : 'text-right'}">{song}</span>
+    {/each}
+  </div>
+  {#if isLoggedIn}
+    <span class="text-2xl text-center font-tw"
+      >{loading ? 'loading... wait a minute &lt;3' : userColor.color}</span
+    >
   {:else}
     <a
       href={logInURL}

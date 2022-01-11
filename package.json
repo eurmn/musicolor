@@ -9,7 +9,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "eslint --ignore-path .gitignore .",
-    "deploy": "yarn run build && gh-pages -d build/"
+    "deploy": "yarn run build && type > build/.nojekyll && gh-pages -d build/"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "next",
