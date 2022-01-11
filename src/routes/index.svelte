@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Buffer } from 'buffer';
-  // import init, { get_img_height } from '../proeminent-color/proeminent_color';
   import axios from 'axios';
 
+  let copiedTooltip: HTMLSpanElement;
   let userColor: { color: string; gradient: string };
   let musicStyle: { dancable: string; energetic: string; happiness: string };
   let songs = new Array<string>();
@@ -66,7 +66,7 @@
               let sadnesses: number[] = features.map((a) => 1 - a.valence);
               let sadness = sadnesses.reduce((a, b) => a + b, 0) / sadnesses.length;
 
-              musicStyle = { dancable: '', energetic: '', happiness: '' }
+              musicStyle = { dancable: '', energetic: '', happiness: '' };
 
               let hueRange: { min: number; max: number };
               // dancável e feliz: amarelo ~ verde
@@ -113,6 +113,14 @@
     });
   }
 
+  function copyColor(): void {
+    copiedTooltip.classList.remove('invisible');
+    navigator.clipboard.writeText(userColor.color);
+    setTimeout(() => {
+      copiedTooltip.classList.add('invisible');
+    }, 500);
+  }
+
   // check for tokens and change isLoggedIn accordlingly
   setUpIsLoggedIn();
   // and do it every time the localStorage changes
@@ -139,8 +147,18 @@
 
 <h1 class="text-3xl m-5 self-start justify-self-start absolute">musicolor</h1>
 <main class="w-full h-full flex flex-col justify-center items-center">
-  {#if userColor}
-    <span class="text-3xl text-center font-tw drop-shadow mb-2">your musicolor is:</span>
+  {#if isLoggedIn}
+    <span class="text-3xl text-center font-tw drop-shadow mb-2">
+      {#if userColor}
+      your musicolor is <span on:click={copyColor}
+      class="font-bold relaive group cursor-pointer"
+      style="color: {userColor.color}"
+      ><span class="invisible text-sm rounded font-normal absolute -right-1 translate-x-full p-1 bg-white text-black"
+      bind:this={copiedTooltip}>copied!</span>{userColor.color}</span>
+      {:else}
+      getting your musicolors &lt;3
+      {/if}
+    </span>
   {/if}
   <div
     class="overflow-hidden font-tw p-5 rounded-lg shadow-lg aspect-square{isLoggedIn ? '' : ' frame'}"
@@ -152,17 +170,13 @@
       <span class="text-2xl w-full opacity-20 text-white block {i % 2 == 0 ? 'text-left' : 'text-right'}">{song}</span>
     {/each}
   </div>
-  {#if isLoggedIn}
-    <span class="text-2xl text-center font-tw"
-      >{loading ? 'loading... wait a minute &lt;3' : userColor.color}</span
-    >
-  {:else}
+  {#if !isLoggedIn}
     <a
       href={logInURL}
       target="_blank"
       class="cursor-pointer text-xl text-center font-tw group"
       style="width: 33vh"
-      >log in with <span class="group-hover:text-green-600 group-hover:font-bold">spotify</span> to see
+      >log in with <span class="text-green-600 font-bold">spotify</span> to see
       your musicolors :)</a
     >
   {/if}
