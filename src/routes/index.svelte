@@ -129,8 +129,8 @@
       {#if userColor}
         your musicolor is <span on:click={copyColor}
         class="font-bold relaive group cursor-pointer"
-        style="color: {userColor.color}"
-        ><span class="transition-opacity duration-500 invisible text-sm rounded font-normal absolute p-1 bg-white text-black"
+        style="color: {userColor.color}; -webkit-tap-highlight-color: transparent;"
+        ><span class="transition-opacity ease-in-out duration-500 invisible text-sm rounded font-normal absolute p-1 bg-white text-black"
         bind:this={copiedTooltip}>copied!</span>{userColor.color}</span>
       {:else}
         getting your musicolors &lt;3
