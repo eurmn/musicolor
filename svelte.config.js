@@ -12,20 +12,15 @@ const config = {
   // procuro uma configuração que remova o path absoluto da build final,
   // por enquanto, estou removendo manualmente.
   kit: {
-    adapter: adapter({
-      pages: 'build',
-      assets: 'build',
-      fallback: null,
-      precompress: false
-    }),
+    adapter: adapter(),
     // hydrate the <div id="svelte"> element in src/app.html
     target: "#svelte",
     ssr: false,
     floc: false,
+    appDir: 'app',
     paths: {
-      base: dev ? '' : '/musicolor',
-    },
-    appDir: 'app_',
+      base: dev ? '' : '/musicolor'
+    }
   },
 };
 

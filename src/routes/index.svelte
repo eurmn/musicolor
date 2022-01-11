@@ -13,7 +13,7 @@
   logInURL += '?response_type=token';
   logInURL += '&client_id=' + encodeURIComponent('e069de3022af4a738e103dfa452c80a2');
   logInURL += '&scope=user-top-read';
-  logInURL += '&redirect_uri=' + encodeURIComponent('http://localhost:3000/callback');
+  logInURL += '&redirect_uri=' + encodeURIComponent('https://euromoon.github.io/musicolor/callback');
 
   function setUpIsLoggedIn(): void {
     let newToken = localStorage.getItem('token');
@@ -37,13 +37,13 @@
       const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
       return Math.round(255 * color)
         .toString(16)
-        .padStart(2, '0'); // convert to Hex and prefix "0" if needed
+        .padStart(2, '0');
     };
     return `#${f(0)}${f(8)}${f(4)}`;
   }
 
   async function getUserColor(): Promise<{ color: string; gradient: string }> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       axios
         .get('https://api.spotify.com/v1/me/top/tracks?limit=25&time_range=short_term', {
           headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -100,7 +100,7 @@
 
               resolve({
                 color: hslToHex(hue, sat, light),
-                gradient: hslToHex(hue, sat, light * 0.4),
+                gradient: hslToHex(hue, sat, light * 0.6),
               });
             });
         });
@@ -168,7 +168,7 @@
   @import url('https://fonts.googleapis.com/css2?family=Titillium+Web&display=swap');
 
   .frame {
-    background: linear-gradient(#9700fd, #003dfd);
+    background: linear-gradient(#9700fd, rgb(88, 42, 255));
   }
 
   .font-tw {
