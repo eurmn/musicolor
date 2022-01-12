@@ -5,12 +5,19 @@
   import chroma from 'chroma-js';
   import axios from 'axios';
 
+  let rangeData = new Array<{
+    colorData: { color: string; gradient: string; };
+    songs: string[],
+    musicStyle: { loudness: string, energetic: string, happiness: string }
+  }>();
+
   let userColor: { color: string; gradient: string };
   let musicStyle: { loudness: string | null; energetic: string; happiness: string };
   let songs = new Array<string>();
   let isLoggedIn = false;
   let token: string;
   let username: string;
+  let range = 2;
   let logInURL = 'https://accounts.spotify.com/authorize';
   logInURL += '?response_type=token';
   logInURL += '&client_id=' + encodeURIComponent('e069de3022af4a738e103dfa452c80a2');
@@ -32,7 +39,20 @@
     }
   }
 
-  async function getUserColor(): Promise<{ color: string; gradient: string }> {
+  function getRangeFromIndex(index: number): string
+  {
+    switch (index)
+    {
+      case 0:
+        return 'short_term';
+      case 1:
+        return 'medium_term';
+      case 2:
+        return 'long_term';
+    }
+  }
+
+  async function getUserColor(term: number): Promise<{ color: string; gradient: string }> {
     return new Promise((resolve) => {
       axios.get('https://api.spotify.com/v1/me', {
           headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -43,7 +63,7 @@
         });
       // 15 ~ short term
       axios
-        .get('https://api.spotify.com/v1/me/top/tracks?limit=15&time_range=short_term', {
+        .get(`https://api.spotify.com/v1/me/top/tracks?limit=15&time_range=${getRangeFromIndex(term)}`, {
           headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         })
         .then((response) => {
@@ -65,7 +85,12 @@
               let sadnessArray: number[] = features.map((a) => 1 - a.valence);
               let sadness = sadnessArray.reduce((a, b) => a + b, 0) / sadnessArray.length;
               
-              let hue = Math.round(energy * 360);
+              let hue = Math.round((1 - energy) * 360);
+
+              let colorData = {
+                color: chroma.hsl(hue, loudness, sadness).hex(),
+                gradient: chroma.hsl(hue, loudness, sadness * 0.6).hex(),
+              };
 
               musicStyle = {
                 loudness: loudness >= 0.5 ? 'loud' : 'quiet',
@@ -73,10 +98,9 @@
                 happiness: energy >= 0.5 ? 'energetic' : 'chill'
               };
 
-              resolve({
-                color: chroma.hsl(hue, loudness, sadness).hex(),
-                gradient: chroma.hsl(hue, loudness, sadness * 0.6).hex(),
-              });
+              rangeData[term] = { colorData, songs, musicStyle };
+
+              resolve(colorData);
             });
         });
     });
@@ -86,8 +110,6 @@
     navigator.clipboard.writeText(userColor.color);
 
     let target = event.target as HTMLSpanElement;
-    
-    // <span use:onload class="transition-opacity ease-in-out duration-500 invisible text-xl rounded absolute p-1 text-white">copied!</span>
     let span = document.createElement('span');
     let translate = { x : Math.random() * 100, y: (Math.random() * 1.5 - 1) * 100 };
     span.classList.add(
@@ -116,13 +138,27 @@
     animation.addEventListener('finish', () => span.remove());
   }
 
+  function setRange(event: MouseEvent)
+  {
+    let el = event.target as HTMLSpanElement;
+    range = parseInt(el.getAttribute('data-range'));
+  }
+
   // check for tokens and change isLoggedIn accordlingly
   setUpIsLoggedIn();
   // and do it every time the localStorage changes
   window.addEventListener('storage', setUpIsLoggedIn);
 
-  $: if (isLoggedIn) {
-    getUserColor().then((hex) => { userColor = hex; });
+  $: if (isLoggedIn && range != null) {
+    if (rangeData[range] != null)
+    {
+      userColor = rangeData[range].colorData;
+      songs = rangeData[range].songs;
+      musicStyle = rangeData[range].musicStyle;
+    } else
+    {  
+      getUserColor(range).then((hex) => { userColor = hex; });
+    }
   }
 </script>
 
@@ -131,6 +167,23 @@
 </svelte:head>
 
 <main class="w-full h-full flex flex-col justify-center items-center font-ttw">
+  {#if userColor}
+    <div class="absolute top-5">
+      <span
+        on:click={setRange}
+        data-range=0
+        class="transition-colors py-1 px-3{ range == 0 ? ' bg-white text-slate-900': '' } rounded-l cursor-pointer">last month</span>
+      <span
+        on:click={setRange}
+        data-range=1
+        class="transition-colors py-1 px-3{ range == 1 ? ' bg-white text-slate-900': '' } cursor-pointer">last 6 months</span>
+      <span
+        on:click={setRange}
+        data-range=2
+        class="transition-colors py-1 px-3{ range == 2 ? ' bg-white text-slate-900': '' } rounded-r cursor-pointer">all time</span>
+    </div>
+  {/if}
+
   <div
     class="group relative mb-5 overflow-hidden font-tw p-5 rounded-lg shadow-lg aspect-square{isLoggedIn ? '' : ' frame'}"
     style="width: 33vh; background: {userColor
