@@ -1,3 +1,3 @@
 # musicolor
 
-[Live website available here](https://euromoon.github.io/musicolor/)
+[Live website available here](https://eurmn.github.io/musicolor/)
