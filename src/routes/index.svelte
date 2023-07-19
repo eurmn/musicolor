@@ -23,7 +23,7 @@
   logInURL += '&client_id=' + encodeURIComponent('e069de3022af4a738e103dfa452c80a2');
   logInURL += '&scope=user-top-read';
   logInURL +=
-    '&redirect_uri=' + encodeURIComponent('https://euromoon.github.io/musicolor/callback');
+    '&redirect_uri=' + encodeURIComponent('https://eurmn.github.io/musicolor/callback');
 
   function setUpIsLoggedIn(): void {
     let newToken = localStorage.getItem('token');
